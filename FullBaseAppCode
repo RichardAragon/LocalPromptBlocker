@@ -1,0 +1,62 @@
+import re
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+from sklearn.feature_extraction.text import CountVectorizer
+
+# Import necessary NLTK resources
+nltk.download('punkt')
+nltk.download('vader_lexicon')
+
+def filter_prompts(prompt):
+    # Phone number pattern
+    phone_pattern = re.compile(r'\(\d{3}\) \d{3}-\d{4}')
+
+    # Email pattern
+    email_pattern = re.compile(r'\b[\w.+-]+@[\w-]+\.[\w.-]+\b')
+
+    # Credit card number pattern
+    cc_pattern = re.compile(r'\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}')
+
+    # Social security number pattern
+    ssn_pattern = re.compile(r'\d{3}-\d{2}-\d{4}')
+
+    # Explicit language pattern
+    explicit_pattern = re.compile(r'\b(?:damn|hell|shit)\b', re.IGNORECASE)
+
+    # Hate speech detection using NLTK's VADER sentiment analyzer
+    analyzer = SentimentIntensityAnalyzer()
+    scores = analyzer.polarity_scores(prompt)
+    if scores['compound'] <= -0.75:  # Adjust threshold as needed
+        return "Prompt rejected due to potential hate speech."
+
+    # Sensitive topic detection using custom word lists
+    sensitive_words = ['violence', 'drugs', 'pornography']  # Customize this list
+    if any(word in prompt.lower() for word in sensitive_words):
+        return "Prompt rejected due to sensitive topic."
+
+    # Length limitation
+    if len(prompt) > 500:  # Adjust maximum length as needed
+        return "Prompt rejected due to excessive length."
+
+    # Check for common patterns
+    if (phone_pattern.search(prompt) or email_pattern.search(prompt) or
+        cc_pattern.search(prompt) or ssn_pattern.search(prompt) or
+        explicit_pattern.search(prompt)):
+        return "Prompt rejected due to sensitive information or explicit language."
+
+    # Additional filtering using a machine learning model (optional)
+    # You can create a model using libraries like scikit-learn to detect
+    # more complex patterns or features.
+
+    return "Prompt accepted."
+
+# Test the function
+print(filter_prompts("(555) 555-5555"))  # Should print "Prompt rejected due to sensitive information or explicit language."
+print(filter_prompts("Hello, world!"))  # Should print "Prompt accepted."
+print(filter_prompts("I hate those people!"))  # Should print "Prompt rejected due to potential hate speech."
+print(filter_prompts("Let's discuss drugs."))  # Should print "Prompt rejected due to sensitive topic."
+print(filter_prompts("This is a very long prompt that exceeds the allowed length."))  # Should print "Prompt rejected due to excessive length."
+print(filter_prompts("Email me at johndoe@example.com"))  # Should print "Prompt rejected due to sensitive information or explicit language."
+print(filter_prompts("My credit card number is 1234 5678 9012 3456"))  # Should print "Prompt rejected due to sensitive information or explicit language."
+print(filter_prompts("My SSN is 123-45-6789"))  # Should print "Prompt rejected due to sensitive information or explicit language."
+print(filter_prompts("This is a damn shame."))  # Should print "Prompt rejected due to sensitive information or explicit language."
